@@ -11,16 +11,18 @@
       <summary class="btn secondary">Poll Settings</summary>
       <div class="settings-menu">
         <div class="small muted">Recovery & poll controls</div>
+        {% if league.status not in ['canceled','closed','confirmed','setup'] %}<button class="settings-action" type="button" onclick="document.getElementById('closeModal').showModal()">Close Draft Poll</button>{% endif %}
         <button class="settings-action warning" type="button" onclick="document.getElementById('resetModal').showModal()">Reset Draft Poll</button>
-        {% if league.status != 'canceled' %}<button class="settings-action danger-text" type="button" onclick="document.getElementById('cancelModal').showModal()">Cancel Draft Poll</button>{% endif %}
+        {% if league.status not in ['canceled','closed'] %}<button class="settings-action danger-text" type="button" onclick="document.getElementById('cancelModal').showModal()">Cancel / Void Draft Poll</button>{% endif %}
+        <button class="settings-action danger-text" type="button" onclick="document.getElementById('deleteModal').showModal()">Delete League</button>
       </div>
     </details>
   </div>
 </div>
 
-{% if league.status=='canceled' %}
+{% if league.status in ['canceled','closed'] %}
 <div class="card">
-  <h2>Draft Poll Canceled</h2>
+  <h2>Draft Poll {{'Closed' if league.status=='closed' else 'Canceled'}}</h2>
   <p class="muted">Managers can no longer vote in this poll. Your league roster, phone numbers, and team names are still saved.</p>
   <button class="btn primary" type="button" onclick="document.getElementById('resetModal').showModal()">Start Fresh Draft Poll</button>
 </div>
@@ -78,4 +80,22 @@
     <div class="row"><button class="btn secondary" type="button" onclick="document.getElementById('cancelModal').close()">Keep Poll Open</button><button class="btn danger" type="submit">CANCEL POLL</button></div>
   </form>
 </dialog>
+
+<dialog id="closeModal" class="modal-card">
+  <form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}">
+    <h2>Close Draft Poll?</h2>
+    <p>This stops new votes and keeps all current results and league data. Use this when you simply want to end an open test or poll.</p>
+    <div class="row"><button class="btn secondary" type="button" onclick="document.getElementById('closeModal').close()">Keep Open</button><button class="btn danger" type="submit">CLOSE POLL</button></div>
+  </form>
+</dialog>
+
+<dialog id="deleteModal" class="modal-card">
+  <form method="post" action="{{url_for('delete_league',league_id=league.id)}}">
+    <h2>Delete This League?</h2>
+    <p>This permanently deletes the league, manager roster, poll rounds, and all votes.</p>
+    <p><b>Use this to completely clear test leagues. This cannot be undone.</b></p>
+    <div class="row"><button class="btn secondary" type="button" onclick="document.getElementById('deleteModal').close()">Keep League</button><button class="btn danger" type="submit">DELETE LEAGUE</button></div>
+  </form>
+</dialog>
+
 {% endblock %}

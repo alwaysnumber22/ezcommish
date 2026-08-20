@@ -465,6 +465,28 @@ def reset_ballot(league_id,manager_id,round_num):
         db().execute('DELETE FROM responses WHERE round_id=? AND manager_id=?',(rnd['id'],manager_id)); db().commit()
     return redirect(url_for('league_dashboard',league_id=league_id))
 
+
+@app.post('/league/<int:league_id>/poll/close')
+def close_draft_poll(league_id):
+    league=owned_league(league_id)
+    if not league: abort(404)
+    db().execute("UPDATE poll_rounds SET status='closed' WHERE league_id=? AND status='open'",(league_id,))
+    db().execute("UPDATE leagues SET status='closed' WHERE id=?",(league_id,))
+    db().commit()
+    flash('Draft poll closed. No additional votes can be submitted.')
+    return redirect(url_for('league_dashboard',league_id=league_id))
+
+@app.post('/league/<int:league_id>/delete')
+def delete_league(league_id):
+    league=owned_league(league_id)
+    if not league: abort(404)
+    league_name=league['name']
+    # Foreign-key cascades remove managers, rounds, options, and responses.
+    db().execute('DELETE FROM leagues WHERE id=? AND commissioner_id=?',(league_id, session['commissioner_id']))
+    db().commit()
+    flash(f'{league_name} was permanently deleted.')
+    return redirect(url_for('home'))
+
 @app.post('/league/<int:league_id>/poll/reset')
 def reset_draft_poll(league_id):
     league=owned_league(league_id)
@@ -525,7 +547,7 @@ def manager_entry(token):
     league=db().execute('SELECT * FROM leagues WHERE share_token=?',(token,)).fetchone()
     if not league: abort(404)
     if league['status']=='confirmed': return redirect(url_for('draft_day',token=token))
-    if league['status']=='canceled': return render_template('poll_canceled.html', league=league)
+    if league['status'] in ('canceled','closed'): return render_template('poll_canceled.html', league=league)
     managers=db().execute('SELECT * FROM managers WHERE league_id=? AND active=1 ORDER BY name',(league['id'],)).fetchall()
     if request.method=='POST':
         mid=int(request.form['manager_id']); m=db().execute('SELECT * FROM managers WHERE id=? AND league_id=?',(mid,league['id'])).fetchone()
