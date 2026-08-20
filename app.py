@@ -504,8 +504,18 @@ def confirm_draft(league_id):
     if request.method=='POST':
         location=request.form.get('location','').strip(); online=request.form.get('online_url','').strip(); msg=request.form.get('message','').strip()
         db().execute("UPDATE leagues SET status='confirmed',location=?,online_url=?,final_message=? WHERE id=?",(location,online,msg,league_id)); db().commit()
-        return redirect(url_for('draft_day',token=league['share_token']))
+        return redirect(url_for('final_notice',league_id=league_id))
     return render_template('confirm.html',league=league)
+
+@app.route('/league/<int:league_id>/final-notice')
+def final_notice(league_id):
+    league=owned_league(league_id)
+    if not league: abort(404)
+    if league['status'] != 'confirmed':
+        return redirect(url_for('league_dashboard', league_id=league_id))
+    managers=db().execute('SELECT * FROM managers WHERE league_id=? AND active=1 ORDER BY name',(league_id,)).fetchall()
+    draft_link=url_for('draft_day', token=league['share_token'], _external=True)
+    return render_template('final_notice.html', league=league, managers=managers, draft_link=draft_link)
 
 @app.route('/p/<token>', methods=['GET','POST'])
 def manager_entry(token):
