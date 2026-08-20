@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="card">
+  <div class="eyebrow">EZCOMMISH</div>
+  <h1>Voting Is Not Open</h1>
+  <p class="muted">
+    This league does not currently have an open voting round.
+    The commissioner may be preparing the next round or finalizing Draft Day.
+  </p>
+  {% if league.status == 'confirmed' %}
+    <a class="btn primary" href="{{ url_for('draft_day', token=league.share_token) }}">View Draft Day</a>
+  {% endif %}
+</div>
+{% endblock %}
