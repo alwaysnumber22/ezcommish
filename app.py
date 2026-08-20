@@ -409,7 +409,7 @@ def reset_ballot(league_id,manager_id,round_num):
         db().execute('DELETE FROM responses WHERE round_id=? AND manager_id=?',(rnd['id'],manager_id)); db().commit()
     return redirect(url_for('league_dashboard',league_id=league_id))
 
-@app.post('/league/<int:league_id>/round2/select/<int:option_id>', methods=['POST'])
+@app.post('/league/<int:league_id>/round2/select/<int:option_id>')
 def select_round2(league_id,option_id):
     league=owned_league(league_id)
     if not league: abort(404)
