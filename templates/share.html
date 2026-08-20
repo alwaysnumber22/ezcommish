@@ -15,7 +15,6 @@
       {{ 'My Vote Submitted ✓' if commissioner_done else 'My Vote Pending' }}
     </span>
   </div>
-
   <div class="ready-steps">
     <div class="ready-step {% if commissioner_done %}complete{% endif %}">
       <div class="step-number">1</div>
@@ -32,7 +31,6 @@
         {% endif %}
       </div>
     </div>
-
     <div class="ready-step">
       <div class="step-number">2</div>
       <div class="step-content">
@@ -42,10 +40,8 @@
         {% else %}
           <p class="small muted">You can share the poll now and cast your own vote later.</p>
         {% endif %}
-
         <div class="label">Shareable Manager Link</div>
         <input id="pollLink" class="input" value="{{ link }}" readonly onclick="this.select()" aria-label="Shareable manager link">
-
         <div class="row share-actions" style="margin-top:12px;">
           <button class="btn primary" type="button" onclick="sharePoll()">Share Round {{ round_num }} Poll</button>
           <button class="btn secondary" type="button" onclick="copyPollLink()">Copy Poll Link</button>
@@ -56,7 +52,6 @@
     </div>
   </div>
 </div>
-
 <div class="card">
   <div class="row between">
     <div>
@@ -67,13 +62,56 @@
   </div>
   <div class="progress"><span style="width:{{ (responded*100/(managers|length or 1))|round }}%"></span></div>
 </div>
-
 <script>
   const pollLink = {{ link|tojson }};
   const leagueName = {{ league.name|tojson }};
+  const leagueTimezone = {{ league.timezone|tojson }};
+  const deadlineRaw = {{ league.deadline|tojson }};
   const roundNum = {{ round_num }};
   const roundLabel = roundNum === 1 ? 'date/time-of-day availability' : 'exact draft start-time availability';
-  const pollMessage = `EZCommish Round ${roundNum} for ${leagueName}: please select your ${roundLabel}. ${pollLink}`;
+
+  function formatDeadline(raw) {
+    if (!raw) return 'the commissioner-selected deadline';
+    const parts = String(raw).split('T');
+    if (parts.length !== 2) return raw;
+    const dateParts = parts[0].split('-').map(Number);
+    const timeParts = parts[1].split(':').map(Number);
+    if (dateParts.length < 3 || timeParts.length < 2) return raw;
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let hour = timeParts[0];
+    const minute = String(timeParts[1]).padStart(2, '0');
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+
+    return `${months[dateParts[1] - 1]} ${dateParts[2]}, ${dateParts[0]} at ${hour}:${minute} ${suffix}`;
+  }
+
+  const deadlineDisplay = formatDeadline(deadlineRaw);
+  const timezoneDisplay = leagueTimezone ? ` (${leagueTimezone})` : '';
+
+  const round1Message =
+`🏈 EZCommish Draft Poll — Round 1
+${leagueName}
+
+It’s time to schedule our draft! Select the dates and times of day that work for you.
+
+Submit your availability here:
+${pollLink}
+
+Please respond by ${deadlineDisplay}${timezoneDisplay}.`;
+
+  const round2Message =
+`🏈 EZCommish Draft Poll — Round 2
+${leagueName}
+
+The draft date and time of day are set. Now select your exact draft start-time availability.
+
+Submit your availability here:
+${pollLink}`;
+
+  const pollMessage = roundNum === 1 ? round1Message : round2Message;
 
   function setStatus(message, ok = true) {
     const el = document.getElementById('shareStatus');
@@ -104,8 +142,7 @@
       try {
         await navigator.share({
           title: `${leagueName} — EZCommish Round ${roundNum}`,
-          text: `Round ${roundNum} is ready. Select your ${roundLabel}:`,
-          url: pollLink
+          text: pollMessage
         });
         setStatus(`Round ${roundNum} share sheet opened.`);
         return;
