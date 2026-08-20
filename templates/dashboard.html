@@ -35,9 +35,9 @@
       </form>
     {% endif %}
 
-    <form method="post" action="{{url_for('delete_league',league_id=league.id)}}" onsubmit="return confirm('Delete this league permanently? Managers, polls, votes, and scheduling history will be deleted. This cannot be undone.');">
+    <form method="post" action="{{url_for('delete_league',league_id=league.id)}}">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <button class="btn danger" type="submit">Delete League</button>
+      <button class="btn danger" type="button" onclick="openDeleteLeagueModal(this)">Delete League</button>
     </form>
   </div>
 </div>
@@ -100,4 +100,43 @@
 {% if league.status=='confirmed' %}
   <a class="btn primary" href="{{url_for('draft_day',token=league.share_token)}}">View Draft Day</a>
 {% endif %}
+
+<div id="deleteLeagueModal" class="delete-modal" hidden>
+  <div class="delete-modal-backdrop" onclick="closeDeleteLeagueModal()"></div>
+  <div class="delete-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteLeagueTitle">
+    <h2 id="deleteLeagueTitle">Delete League?</h2>
+    <p>This will permanently delete the league, including all managers, draft polls, votes, and scheduling history.</p>
+    <p><strong>This action cannot be undone.</strong></p>
+    <div class="row delete-modal-actions">
+      <button class="btn secondary" type="button" onclick="closeDeleteLeagueModal()">Keep League</button>
+      <button class="btn danger" type="button" onclick="confirmDeleteLeague()">Delete League</button>
+    </div>
+  </div>
+</div>
+<script>
+let pendingDeleteLeagueForm = null;
+
+function openDeleteLeagueModal(button) {
+  pendingDeleteLeagueForm = button.closest('form');
+  const modal = document.getElementById('deleteLeagueModal');
+  const leagueName =
+    button.dataset.leagueName ||
+    (pendingDeleteLeagueForm && pendingDeleteLeagueForm.dataset.leagueName) ||
+    {{ league.name|tojson if league is defined else '"this league"'|safe }};
+  document.getElementById('deleteLeagueTitle').textContent = `Delete ${leagueName}?`;
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+}
+
+function closeDeleteLeagueModal() {
+  document.getElementById('deleteLeagueModal').hidden = true;
+  document.body.classList.remove('modal-open');
+  pendingDeleteLeagueForm = null;
+}
+
+function confirmDeleteLeague() {
+  if (pendingDeleteLeagueForm) pendingDeleteLeagueForm.submit();
+}
+</script>
+
 {% endblock %}
