@@ -371,7 +371,7 @@ def choose_dates(league_id):
             for w in TIME_WINDOWS:
                 order+=1; db().execute('INSERT INTO poll_options(round_id,date_value,window_name,sort_order) VALUES(?,?,?,?)',(rid,d,w,order))
         db().execute("UPDATE leagues SET deadline=?, status='round1' WHERE id=?",(deadline,league_id)); db().commit()
-        return redirect(url_for('share_poll',league_id=league_id))
+        return redirect(url_for('commissioner_vote',league_id=league_id))
     return render_template('dates.html', league=league, windows=TIME_WINDOWS)
 
 @app.route('/league/<int:league_id>/share')
@@ -415,6 +415,7 @@ def commissioner_vote(league_id):
         flash('Commissioner manager record was not found.')
         return redirect(url_for('league_dashboard', league_id=league_id))
     session[f'manager_{league["share_token"]}']=manager['id']
+    session[f'commissioner_voting_{league["share_token"]}']=True
     if not manager['team_name']:
         return redirect(url_for('team_name', token=league['share_token']))
     return redirect(url_for('vote', token=league['share_token']))
@@ -555,6 +556,9 @@ def vote(token):
         db().executemany('INSERT INTO responses(round_id,manager_id,option_id,vote,submitted_at) VALUES(?,?,?,?,?)', votes)
         db().commit()
         app.logger.info('Ballot submitted league_id=%s round_id=%s manager_id=%s votes=%s', league['id'], rnd['id'], mid, len(votes))
+        if session.pop(f'commissioner_voting_{token}', False):
+            flash('Your commissioner vote has been submitted.')
+            return redirect(url_for('share_poll', league_id=league['id']))
         return redirect(url_for('submitted',token=token))
     return render_template('vote.html',league=league,rnd=rnd,opts=opts,windows=TIME_WINDOWS)
 
