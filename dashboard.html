@@ -28,6 +28,19 @@
 <div class="card">
   <h2>Responses</h2>
   {% if active %}
+    {% if commissioner_manager %}
+      <div class="league commish-vote-card">
+        <div>
+          <b>Your Commissioner Vote</b>
+          <div class="small muted">You count as one of the {{league.team_count}} managers.</div>
+        </div>
+        {% if commissioner_done %}
+          <span class="pill green">My Vote Submitted ✓</span>
+        {% else %}
+          <a class="btn primary" href="{{url_for('commissioner_vote',league_id=league.id)}}">Cast My Vote</a>
+        {% endif %}
+      </div>
+    {% endif %}
     <div class="progress"><span style="width:{{(responded*100/(statuses|length or 1))|round}}%"></span></div>
     <p><b>{{responded}} of {{statuses|length}}</b> managers responded</p>
     {% for m,done in statuses %}

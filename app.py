@@ -392,7 +392,28 @@ def league_dashboard(league_id):
             done=manager_submitted(active['id'],m['id'])
             statuses.append((m,done))
             responded += 1 if done else 0
-    return render_template('dashboard.html',league=league,statuses=statuses,responded=responded,active=active,r1=r1,r2=r2)
+    commissioner_manager=next((m for m in managers if m['is_commissioner']), None)
+    commissioner_done=bool(active and commissioner_manager and manager_submitted(active['id'], commissioner_manager['id']))
+    return render_template('dashboard.html',league=league,statuses=statuses,responded=responded,active=active,r1=r1,r2=r2,commissioner_manager=commissioner_manager,commissioner_done=commissioner_done)
+
+@app.route('/league/<int:league_id>/my-vote')
+def commissioner_vote(league_id):
+    league=owned_league(league_id)
+    if not league:
+        abort(404)
+    if league['status'] in ('canceled', 'confirmed'):
+        return redirect(url_for('league_dashboard', league_id=league_id))
+    manager=db().execute(
+        'SELECT * FROM managers WHERE league_id=? AND is_commissioner=1 AND active=1 ORDER BY id LIMIT 1',
+        (league_id,)
+    ).fetchone()
+    if not manager:
+        flash('Commissioner manager record was not found.')
+        return redirect(url_for('league_dashboard', league_id=league_id))
+    session[f'manager_{league["share_token"]}']=manager['id']
+    if not manager['team_name']:
+        return redirect(url_for('team_name', token=league['share_token']))
+    return redirect(url_for('vote', token=league['share_token']))
 
 @app.route('/league/<int:league_id>/results/<int:round_num>')
 def results(league_id,round_num):
