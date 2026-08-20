@@ -447,7 +447,10 @@ def select_round1(league_id,option_id):
     while start<=end:
         i+=1; db().execute('INSERT INTO poll_options(round_id,date_value,window_name,time_value,sort_order) VALUES(?,?,?,?,?)',(r2id,opt['date_value'],opt['window_name'],start.strftime('%-I:%M %p'),i)); start+=timedelta(minutes=30)
     db().execute("UPDATE leagues SET status='round2', final_date=?, final_window=? WHERE id=?",(opt['date_value'],opt['window_name'],league_id)); db().commit()
-    return redirect(url_for('share_poll',league_id=league_id))
+    # Commissioner is also a league manager. Move them directly into the newly
+    # created Round 2 exact-time ballot instead of requiring a text/share link.
+    flash('Round 2 is ready. Select your preferred exact draft start times.')
+    return redirect(url_for('commissioner_vote',league_id=league_id))
 
 @app.post('/league/<int:league_id>/new-dates')
 def new_dates(league_id):
