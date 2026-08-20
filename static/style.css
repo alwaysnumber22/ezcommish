@@ -10,3 +10,15 @@
 .danger-outline{background:transparent;color:#ff7b7b;border:1px solid #ff7b7b}
 .poll-management-card{border:1px solid rgba(255,255,255,.12)}
 @media(max-width:700px){.league-manage-row{align-items:flex-start}.league-actions{width:100%;flex-wrap:wrap}.management-actions{flex-direction:column;align-items:stretch}.management-actions form,.management-actions .btn{width:100%}}
+
+/* Round Ready / Progress commissioner workflow */
+.eyebrow{font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#2ccb51;margin-bottom:4px}
+.round-ready-header{align-items:flex-start;gap:18px}
+.ready-steps{display:grid;grid-template-columns:1fr 1.25fr;gap:16px;margin-top:18px}
+.ready-step{display:flex;gap:14px;padding:18px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(255,255,255,.025)}
+.ready-step.complete{border-color:rgba(44,203,81,.38);background:rgba(44,203,81,.05)}
+.step-number{flex:0 0 34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#26364a;color:#fff;font-weight:800}
+.ready-step.complete .step-number{background:#2ccb51;color:#07120a}
+.step-content{min-width:0;flex:1}.step-content h2{margin:0 0 6px}.status-success{font-weight:800;color:#2ccb51;margin-top:10px}
+.share-actions{flex-wrap:wrap}
+@media(max-width:760px){.ready-steps{grid-template-columns:1fr}.round-ready-header{flex-direction:column}.share-actions .btn{width:100%;text-align:center}}

@@ -1,34 +1,79 @@
 {% extends 'base.html' %}
 {% block body %}
+<div class="card round-ready-card">
+  <div class="row between round-ready-header">
+    <div>
+      <div class="eyebrow">ROUND {{ round_num }}</div>
+      <h1>Round {{ round_num }} Is Ready</h1>
+      {% if round_num == 1 %}
+        <p class="muted">Cast your availability, then send Round 1 to the rest of your league.</p>
+      {% else %}
+        <p class="muted">Cast your exact-time vote, then send Round 2 to the rest of your league.</p>
+      {% endif %}
+    </div>
+    <span class="pill {% if commissioner_done %}green{% endif %}">
+      {{ 'My Vote Submitted ✓' if commissioner_done else 'My Vote Pending' }}
+    </span>
+  </div>
+
+  <div class="ready-steps">
+    <div class="ready-step {% if commissioner_done %}complete{% endif %}">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h2>Your Vote</h2>
+        {% if commissioner_done %}
+          <p class="small muted">Your Round {{ round_num }} selections are locked in.</p>
+          <div class="status-success">✓ My Vote Submitted</div>
+        {% else %}
+          <p class="small muted">You count as one of the {{ league.team_count }} managers.</p>
+          <a class="btn primary" href="{{ url_for('commissioner_vote', league_id=league.id) }}">
+            Cast My Round {{ round_num }} Vote
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="ready-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h2>Send to League</h2>
+        {% if commissioner_done %}
+          <p class="small muted"><strong>Your vote is locked.</strong> Now send Round {{ round_num }} to your managers.</p>
+        {% else %}
+          <p class="small muted">You can share the poll now and cast your own vote later.</p>
+        {% endif %}
+
+        <div class="label">Shareable Manager Link</div>
+        <input id="pollLink" class="input" value="{{ link }}" readonly onclick="this.select()" aria-label="Shareable manager link">
+
+        <div class="row share-actions" style="margin-top:12px;">
+          <button class="btn primary" type="button" onclick="sharePoll()">Share Round {{ round_num }} Poll</button>
+          <button class="btn secondary" type="button" onclick="copyPollLink()">Copy Poll Link</button>
+          <a class="btn secondary" href="#" onclick="return openTextMessage(event)">Message Text</a>
+        </div>
+        <p id="shareStatus" class="small" style="margin-top:10px; min-height:20px;" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card">
-  <h1>Poll Ready</h1>
-  <p>{{ league.name }} · Fantasy {{ league.sport }}</p>
-
-  <div class="label">Shareable Manager Link</div>
-  <input id="pollLink" class="input" value="{{ link }}" readonly onclick="this.select()" aria-label="Shareable manager link">
-
-  <div class="card" style="margin-top:14px; border:1px solid rgba(44,203,81,.35);">
-    <h2 style="margin-top:0;">Commissioner Availability</h2>
-    <p class="small muted">You count as one of the {{ league.team_count }} managers. You do not need to text the poll to yourself.</p>
-    <a class="btn primary" href="{{ url_for('commissioner_vote', league_id=league.id) }}">Cast My Vote</a>
+  <div class="row between">
+    <div>
+      <h2>Round {{ round_num }} Progress</h2>
+      <p class="small muted">{{ other_responded }} of {{ other_total }} other managers responded · {{ responded }} of {{ managers|length }} total</p>
+    </div>
+    <a class="btn secondary" href="{{ url_for('league_dashboard', league_id=league.id) }}">View Full Progress</a>
   </div>
-
-  <div class="row" style="margin-top:12px;">
-    <button class="btn primary" type="button" onclick="sharePoll()">Share Poll</button>
-    <button class="btn secondary" type="button" onclick="copyPollLink()">Copy Link</button>
-    <a id="textPollBtn" class="btn secondary" href="#" onclick="return openTextMessage(event)">Message Text</a>
-    <a class="btn secondary" href="{{ url_for('league_dashboard', league_id=league.id) }}">View Progress</a>
-  </div>
-
-  <p id="shareStatus" class="small" style="margin-top:10px; min-height:20px;" aria-live="polite"></p>
-  <p class="small muted">The same common link is used by every manager. They select their name when they open it.</p>
-  <p class="small muted">On a phone, <strong>Share Poll</strong> opens the phone's share sheet so you can choose Messages. <strong>Copy Link</strong> also works as a fallback.</p>
+  <div class="progress"><span style="width:{{ (responded*100/(managers|length or 1))|round }}%"></span></div>
 </div>
 
 <script>
   const pollLink = {{ link|tojson }};
   const leagueName = {{ league.name|tojson }};
-  const pollMessage = `Draft scheduling for ${leagueName} is open. Select your availability here: ${pollLink}`;
+  const roundNum = {{ round_num }};
+  const roundLabel = roundNum === 1 ? 'date/time-of-day availability' : 'exact draft start-time availability';
+  const pollMessage = `EZCommish Round ${roundNum} for ${leagueName}: please select your ${roundLabel}. ${pollLink}`;
 
   function setStatus(message, ok = true) {
     const el = document.getElementById('shareStatus');
@@ -42,18 +87,14 @@
         await navigator.clipboard.writeText(pollLink);
       } else {
         const input = document.getElementById('pollLink');
-        input.focus();
-        input.select();
-        input.setSelectionRange(0, 99999);
+        input.focus(); input.select(); input.setSelectionRange(0, 99999);
         const copied = document.execCommand('copy');
         if (!copied) throw new Error('copy command failed');
       }
-      setStatus('Link copied. Paste it into your league group text.');
+      setStatus(`Round ${roundNum} link copied. Paste it into your league group text.`);
     } catch (err) {
       const input = document.getElementById('pollLink');
-      input.focus();
-      input.select();
-      input.setSelectionRange(0, 99999);
+      input.focus(); input.select(); input.setSelectionRange(0, 99999);
       setStatus('Automatic copy was blocked. The link is selected — choose Copy from your browser menu.', false);
     }
   }
@@ -62,17 +103,16 @@
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${leagueName} Draft Poll`,
-          text: `Draft scheduling for ${leagueName} is open. Select your availability:`,
+          title: `${leagueName} — EZCommish Round ${roundNum}`,
+          text: `Round ${roundNum} is ready. Select your ${roundLabel}:`,
           url: pollLink
         });
-        setStatus('Share sheet opened.');
+        setStatus(`Round ${roundNum} share sheet opened.`);
         return;
       } catch (err) {
         if (err && err.name === 'AbortError') return;
       }
     }
-    // Desktop/unsupported fallback: copy the link.
     await copyPollLink();
   }
 
@@ -81,9 +121,7 @@
     const encoded = encodeURIComponent(pollMessage);
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-    // iOS and Android parse the SMS body separator differently on some versions.
-    const smsUrl = isIOS ? `sms:&body=${encoded}` : `sms:?body=${encoded}`;
-    window.location.href = smsUrl;
+    window.location.href = isIOS ? `sms:&body=${encoded}` : `sms:?body=${encoded}`;
     setStatus('Opening your text-message app…');
     return false;
   }

@@ -371,16 +371,38 @@ def choose_dates(league_id):
             for w in TIME_WINDOWS:
                 order+=1; db().execute('INSERT INTO poll_options(round_id,date_value,window_name,sort_order) VALUES(?,?,?,?)',(rid,d,w,order))
         db().execute("UPDATE leagues SET deadline=?, status='round1' WHERE id=?",(deadline,league_id)); db().commit()
-        return redirect(url_for('commissioner_vote',league_id=league_id))
+        # Round 1 is now ready. Keep voting and league sharing as two clear,
+        # separate commissioner actions on the same Ready / Progress screen.
+        return redirect(url_for('share_poll',league_id=league_id))
     return render_template('dates.html', league=league, windows=TIME_WINDOWS)
 
 @app.route('/league/<int:league_id>/share')
 def share_poll(league_id):
     league=owned_league(league_id)
     if not league: abort(404)
-    managers=db().execute('SELECT * FROM managers WHERE league_id=?',(league_id,)).fetchall()
+    managers=db().execute('SELECT * FROM managers WHERE league_id=? AND active=1 ORDER BY id',(league_id,)).fetchall()
     link=url_for('manager_entry',token=league['share_token'],_external=True)
-    return render_template('share.html', league=league, managers=managers, link=link)
+
+    # This page is the commissioner's single Round Ready / Progress hub.
+    # It deliberately keeps "Cast My Vote" and "Share to League" separate.
+    round_num = 2 if league['status']=='round2' else 1
+    rnd=get_active_round(league_id, round_num)
+    commissioner_manager=next((m for m in managers if m['is_commissioner']), None)
+    commissioner_done=bool(rnd and commissioner_manager and manager_submitted(rnd['id'], commissioner_manager['id']))
+    responded=0
+    other_responded=0
+    other_total=0
+    if rnd:
+        for m in managers:
+            done=manager_submitted(rnd['id'],m['id'])
+            responded += 1 if done else 0
+            if not m['is_commissioner']:
+                other_total += 1
+                other_responded += 1 if done else 0
+
+    return render_template('share.html', league=league, managers=managers, link=link,
+                           rnd=rnd, round_num=round_num, commissioner_done=commissioner_done,
+                           responded=responded, other_responded=other_responded, other_total=other_total)
 
 @app.route('/league/<int:league_id>/dashboard')
 def league_dashboard(league_id):
@@ -447,10 +469,10 @@ def select_round1(league_id,option_id):
     while start<=end:
         i+=1; db().execute('INSERT INTO poll_options(round_id,date_value,window_name,time_value,sort_order) VALUES(?,?,?,?,?)',(r2id,opt['date_value'],opt['window_name'],start.strftime('%-I:%M %p'),i)); start+=timedelta(minutes=30)
     db().execute("UPDATE leagues SET status='round2', final_date=?, final_window=? WHERE id=?",(opt['date_value'],opt['window_name'],league_id)); db().commit()
-    # Commissioner is also a league manager. Move them directly into the newly
-    # created Round 2 exact-time ballot instead of requiring a text/share link.
-    flash('Round 2 is ready. Select your preferred exact draft start times.')
-    return redirect(url_for('commissioner_vote',league_id=league_id))
+    # Round 2 follows the same pattern as Round 1: first show a clear Ready
+    # screen, then let the commissioner vote and/or share the new round.
+    flash('Round 2 is ready. Cast your time vote and share the exact-time poll with your league.')
+    return redirect(url_for('share_poll',league_id=league_id))
 
 @app.post('/league/<int:league_id>/new-dates')
 def new_dates(league_id):
