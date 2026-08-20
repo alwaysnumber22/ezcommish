@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="row between">
+  <div>
+    <h1>{{league.name}}</h1>
+    <div class="muted">Fantasy {{league.sport}} · {{league.team_count}} teams</div>
+  </div>
+  <div class="row">
+    {% if league.status not in ['canceled','confirmed'] %}<a class="btn secondary" href="{{url_for('share_poll',league_id=league.id)}}">Share Poll</a>{% endif %}
+    <details class="poll-settings">
+      <summary class="btn secondary">Poll Settings</summary>
+      <div class="settings-menu">
+        <div class="small muted">Recovery & poll controls</div>
+        <button class="settings-action warning" type="button" onclick="document.getElementById('resetModal').showModal()">Reset Draft Poll</button>
+        {% if league.status != 'canceled' %}<button class="settings-action danger-text" type="button" onclick="document.getElementById('cancelModal').showModal()">Cancel Draft Poll</button>{% endif %}
+      </div>
+    </details>
+  </div>
+</div>
+
+{% if league.status=='canceled' %}
+<div class="card">
+  <h2>Draft Poll Canceled</h2>
+  <p class="muted">Managers can no longer vote in this poll. Your league roster, phone numbers, and team names are still saved.</p>
+  <button class="btn primary" type="button" onclick="document.getElementById('resetModal').showModal()">Start Fresh Draft Poll</button>
+</div>
+{% else %}
+<div class="card">
+  <h2>Responses</h2>
+  {% if active %}
+    <div class="progress"><span style="width:{{(responded*100/(statuses|length or 1))|round}}%"></span></div>
+    <p><b>{{responded}} of {{statuses|length}}</b> managers responded</p>
+    {% for m,done in statuses %}
+      <div class="league">
+        <div><b>{{m.name}}</b><div class="small muted">{{m.team_name or 'Team name not entered'}}</div></div>
+        <div class="row">
+          <span class="pill {% if done %}green{% endif %}">{{'Responded' if done else 'Waiting'}}</span>
+          {% if done %}<form method="post" action="{{url_for('reset_ballot',league_id=league.id,manager_id=m.id,round_num=active.round_num)}}"><button class="btn danger">Reset</button></form>{% endif %}
+        </div>
+      </div>
+    {% endfor %}
+    <a class="btn primary" href="{{url_for('results',league_id=league.id,round_num=active.round_num)}}">View Round {{active.round_num}} Results</a>
+  {% else %}
+    <p class="muted">No open voting round.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if league.status=='confirmed' %}<a class="btn primary" href="{{url_for('draft_day',token=league.share_token)}}">View Draft Day</a>{% endif %}
+
+<dialog id="resetModal" class="modal-card">
+  <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}">
+    <h2>Reset Draft Poll?</h2>
+    <p>This will erase all current Round 1 and Round 2 voting results, selected dates/times, and the poll deadline.</p>
+    <p><b>Manager names, phone numbers, and team names will be kept.</b></p>
+    <div class="row"><button class="btn secondary" type="button" onclick="document.getElementById('resetModal').close()">Keep Current Poll</button><button class="btn danger" type="submit">RESET POLL</button></div>
+  </form>
+</dialog>
+
+<dialog id="cancelModal" class="modal-card">
+  <form method="post" action="{{url_for('cancel_draft_poll',league_id=league.id)}}">
+    <h2>Cancel Draft Poll?</h2>
+    <p>This closes the current poll. Managers will no longer be able to vote from the league link.</p>
+    <p>Your league, manager roster, team names, and existing poll history stay saved.</p>
+    <div class="row"><button class="btn secondary" type="button" onclick="document.getElementById('cancelModal').close()">Keep Poll Open</button><button class="btn danger" type="submit">CANCEL POLL</button></div>
+  </form>
+</dialog>
+{% endblock %}

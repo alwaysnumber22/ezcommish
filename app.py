@@ -1,15 +1,42 @@
-import os, sqlite3, secrets
+import os, sqlite3, secrets, logging, sys, traceback, uuid
 from datetime import datetime, timedelta
 from flask import Flask, g, render_template, request, redirect, url_for, session, flash, abort, send_file
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+
+# Production diagnostics: send errors to Render stdout/stderr so they appear in Logs.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    stream=sys.stdout,
+    force=True,
+)
+app.logger.setLevel(logging.INFO)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-me')
 app.config['DATABASE_URL'] = os.environ.get('DATABASE_URL', '')
 app.config['DATABASE'] = os.environ.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__), 'ezcommish.db'))
 if os.environ.get('RENDER'):
     app.config.update(SESSION_COOKIE_SECURE=True, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
+
+@app.get('/health')
+def health():
+    return {'ok': True, 'service': 'EZCommish'}, 200
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(exc):
+    # Preserve normal HTTP errors such as 404 instead of turning them into 500s.
+    from werkzeug.exceptions import HTTPException
+    if isinstance(exc, HTTPException):
+        return exc
+    error_id = uuid.uuid4().hex[:8]
+    app.logger.exception(
+        'EZCommish error_id=%s path=%s method=%s',
+        error_id, request.path, request.method
+    )
+    # Show a useful reference to beta testers without exposing stack traces/secrets.
+    return render_template('error.html', error_id=error_id), 500
 
 TIME_WINDOWS = {
     'Midday': ('11:00 AM', '2:00 PM'),
@@ -409,6 +436,30 @@ def reset_ballot(league_id,manager_id,round_num):
         db().execute('DELETE FROM responses WHERE round_id=? AND manager_id=?',(rnd['id'],manager_id)); db().commit()
     return redirect(url_for('league_dashboard',league_id=league_id))
 
+@app.post('/league/<int:league_id>/poll/reset')
+def reset_draft_poll(league_id):
+    league=owned_league(league_id)
+    if not league: abort(404)
+    # Delete every poll round for this league. Cascading FKs remove options/responses.
+    # Managers, phone numbers, and team names are intentionally preserved.
+    db().execute('DELETE FROM poll_rounds WHERE league_id=?',(league_id,))
+    db().execute("""UPDATE leagues SET status='setup', deadline=NULL, final_date=NULL,
+                 final_time=NULL, final_window=NULL, location=NULL, online_url=NULL,
+                 final_message=NULL WHERE id=?""",(league_id,))
+    db().commit()
+    flash('Draft poll reset. Manager roster and team names were kept.')
+    return redirect(url_for('choose_dates',league_id=league_id))
+
+@app.post('/league/<int:league_id>/poll/cancel')
+def cancel_draft_poll(league_id):
+    league=owned_league(league_id)
+    if not league: abort(404)
+    db().execute("UPDATE poll_rounds SET status='canceled' WHERE league_id=? AND status='open'",(league_id,))
+    db().execute("UPDATE leagues SET status='canceled' WHERE id=?",(league_id,))
+    db().commit()
+    flash('Draft poll canceled. Existing league and manager information were kept.')
+    return redirect(url_for('league_dashboard',league_id=league_id))
+
 @app.post('/league/<int:league_id>/round2/select/<int:option_id>')
 def select_round2(league_id,option_id):
     league=owned_league(league_id)
@@ -435,6 +486,7 @@ def manager_entry(token):
     league=db().execute('SELECT * FROM leagues WHERE share_token=?',(token,)).fetchone()
     if not league: abort(404)
     if league['status']=='confirmed': return redirect(url_for('draft_day',token=token))
+    if league['status']=='canceled': return render_template('poll_canceled.html', league=league)
     managers=db().execute('SELECT * FROM managers WHERE league_id=? AND active=1 ORDER BY name',(league['id'],)).fetchall()
     if request.method=='POST':
         mid=int(request.form['manager_id']); m=db().execute('SELECT * FROM managers WHERE id=? AND league_id=?',(mid,league['id'])).fetchone()
@@ -452,17 +504,18 @@ def team_name(token):
     if request.method=='POST':
         team=request.form.get('team_name','').strip()
         if team:
-            db().execute('UPDATE managers SET team_name=? WHERE id=?',(team,mid)); db().commit(); return redirect(url_for('vote',token=token))
+            db().execute('UPDATE managers SET team_name=? WHERE id=?',(team,mid)); db().commit(); app.logger.info('Team name saved manager_id=%s league_id=%s; redirecting to vote', mid, league['id']); return redirect(url_for('vote',token=token))
     return render_template('team.html',league=league,m=m)
 
 @app.route('/p/<token>/vote', methods=['GET','POST'])
 def vote(token):
+    app.logger.info('Vote page requested token=%s', token[:6] + '...')
     league=db().execute('SELECT * FROM leagues WHERE share_token=?',(token,)).fetchone(); mid=session.get(f'manager_{token}')
     if not league or not mid: return redirect(url_for('manager_entry',token=token))
     round_num=2 if league['status']=='round2' else 1
     rnd=get_active_round(league['id'],round_num)
     if not rnd: return redirect(url_for('manager_entry',token=token))
-    opts=db().execute('SELECT * FROM poll_options WHERE round_id=? ORDER BY sort_order',(rnd['id'],)).fetchall()
+    opts=db().execute('SELECT * FROM poll_options WHERE round_id=? ORDER BY sort_order',(rnd['id'],)).fetchall(); app.logger.info('Vote page league_id=%s round_id=%s round_num=%s options=%s manager_id=%s', league['id'], rnd['id'], round_num, len(opts), mid)
     if manager_submitted(rnd['id'],mid): return redirect(url_for('submitted',token=token))
     if request.method=='POST':
         votes=[]
