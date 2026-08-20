@@ -1,9 +1,60 @@
+from functools import wraps
 import os, sqlite3, secrets, logging, sys, traceback, uuid, re
 from datetime import datetime, timedelta
 from flask import Flask, g, render_template, request, redirect, url_for, session, flash, abort, send_file
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+
+# Security-hardened session configuration
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.environ.get('RENDER', '').lower() == 'true' or os.environ.get('FLASK_ENV') == 'production',
+    PERMANENT_SESSION_LIFETIME=60 * 60 * 12,  # 12 hours
+)
+
+def current_commissioner_id():
+    return session.get('user_id') or session.get('commissioner_id')
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_commissioner_id():
+            flash('Please sign in to manage your leagues.')
+            return redirect(url_for('index'))
+        return view(*args, **kwargs)
+    return wrapped
+
+def get_csrf_token():
+    token = session.get('_csrf_token')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['_csrf_token'] = token
+    return token
+
+app.jinja_env.globals['csrf_token'] = get_csrf_token
+
+def validate_csrf():
+    sent = request.form.get('_csrf_token', '')
+    expected = session.get('_csrf_token', '')
+    if not sent or not expected or not secrets.compare_digest(sent, expected):
+        abort(400, description='Invalid or expired form token. Please refresh the page and try again.')
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
+@app.after_request
+def security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    if request.is_secure:
+        response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    return response
+
 
 # Production diagnostics: send errors to Render stdout/stderr so they appear in Logs.
 logging.basicConfig(
@@ -336,6 +387,7 @@ def logout():
     session.clear(); return redirect(url_for('index'))
 
 @app.route('/home')
+@login_required
 def home():
     c=current_commissioner()
     if not c: return redirect(url_for('index'))
@@ -397,6 +449,7 @@ def choose_dates(league_id):
     return render_template('dates.html', league=league, windows=TIME_WINDOWS)
 
 @app.route('/league/<int:league_id>/share')
+@login_required
 def share_poll(league_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -436,6 +489,7 @@ def share_poll(league_id):
     )
 
 @app.route('/league/<int:league_id>/dashboard')
+@login_required
 def league_dashboard(league_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -454,6 +508,7 @@ def league_dashboard(league_id):
     return render_template('dashboard.html',league=league,statuses=statuses,responded=responded,active=active,r1=r1,r2=r2,commissioner_manager=commissioner_manager,commissioner_done=commissioner_done)
 
 @app.route('/league/<int:league_id>/my-vote')
+@login_required
 def commissioner_vote(league_id):
     league=owned_league(league_id)
     if not league:
@@ -474,6 +529,7 @@ def commissioner_vote(league_id):
     return redirect(url_for('vote', token=league['share_token']))
 
 @app.route('/league/<int:league_id>/results/<int:round_num>')
+@login_required
 def results(league_id,round_num):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -486,6 +542,7 @@ def results(league_id,round_num):
     return render_template('results.html',league=league,rnd=rnd,rows=rows)
 
 @app.post('/league/<int:league_id>/round1/select/<int:option_id>')
+@login_required
 def select_round1(league_id,option_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -511,7 +568,9 @@ def new_dates(league_id):
     return redirect(url_for('choose_dates',league_id=league_id))
 
 @app.post('/league/<int:league_id>/reset/<int:manager_id>/<int:round_num>')
+@login_required
 def reset_ballot(league_id,manager_id,round_num):
+    validate_csrf()
     if not owned_league(league_id): abort(404)
     rnd=get_active_round(league_id,round_num)
     if rnd:
@@ -520,7 +579,9 @@ def reset_ballot(league_id,manager_id,round_num):
 
 
 @app.post('/league/<int:league_id>/poll/close')
+@login_required
 def close_draft_poll(league_id):
+    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     db().execute("UPDATE poll_rounds SET status='closed' WHERE league_id=? AND status='open'",(league_id,))
@@ -530,7 +591,9 @@ def close_draft_poll(league_id):
     return redirect(url_for('league_dashboard',league_id=league_id))
 
 @app.post('/league/<int:league_id>/delete')
+@login_required
 def delete_league(league_id):
+    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     league_name=league['name']
@@ -541,7 +604,9 @@ def delete_league(league_id):
     return redirect(url_for('home'))
 
 @app.post('/league/<int:league_id>/poll/reset')
+@login_required
 def reset_draft_poll(league_id):
+    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     # Delete every poll round for this league. Cascading FKs remove options/responses.
@@ -555,7 +620,9 @@ def reset_draft_poll(league_id):
     return redirect(url_for('choose_dates',league_id=league_id))
 
 @app.post('/league/<int:league_id>/poll/cancel')
+@login_required
 def cancel_draft_poll(league_id):
+    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     db().execute("UPDATE poll_rounds SET status='canceled' WHERE league_id=? AND status='open'",(league_id,))
@@ -565,6 +632,7 @@ def cancel_draft_poll(league_id):
     return redirect(url_for('league_dashboard',league_id=league_id))
 
 @app.post('/league/<int:league_id>/round2/select/<int:option_id>')
+@login_required
 def select_round2(league_id,option_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -576,7 +644,10 @@ def select_round2(league_id,option_id):
     return redirect(url_for('confirm_draft',league_id=league_id))
 
 @app.route('/league/<int:league_id>/confirm', methods=['GET','POST'])
+@login_required
 def confirm_draft(league_id):
+    if request.method == 'POST':
+        validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     if request.method=='POST':
