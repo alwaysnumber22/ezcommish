@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
+<div class="page-nav"><a class="back-link" href="{{ url_for('home') }}">← Back to My Leagues</a></div>
 <div class="card round-ready-card">
   <div class="row between round-ready-header">
     <div>
@@ -8,11 +9,11 @@
       {% if round_num == 1 %}
         <p class="muted">Cast your availability, then send Round 1 to the rest of your league.</p>
       {% else %}
-        <p class="muted">Cast your exact-time vote, then send Round 2 to the rest of your league.</p>
+        <p class="muted">Cast your exact-time vote, then send Round 2 — Start Time to the rest of your league.</p>
       {% endif %}
     </div>
     <span class="pill {% if commissioner_done %}green{% endif %}">
-      {{ 'My Vote Submitted ✓' if commissioner_done else 'My Vote Pending' }}
+      {{ 'Your Vote: Submitted ✓' if commissioner_done else 'Your Vote: Not Submitted' }}
     </span>
   </div>
   <div class="ready-steps">
@@ -22,7 +23,7 @@
         <h2>Your Vote</h2>
         {% if commissioner_done %}
           <p class="small muted">Your Round {{ round_num }} selections are locked in.</p>
-          <div class="status-success">✓ My Vote Submitted</div>
+          <div class="status-success">✓ Your Vote Submitted</div>
         {% else %}
           <p class="small muted">You count as one of the {{ league.team_count }} managers.</p>
           <a class="btn primary" href="{{ url_for('commissioner_vote', league_id=league.id) }}">
@@ -34,7 +35,7 @@
     <div class="ready-step">
       <div class="step-number">2</div>
       <div class="step-content">
-        <h2>Send to League</h2>
+        <h2>Share with Managers</h2>
         {% if commissioner_done %}
           <p class="small muted"><strong>Your vote is locked.</strong> Now send Round {{ round_num }} to your managers.</p>
         {% else %}
@@ -44,8 +45,8 @@
         <input id="pollLink" class="input" value="{{ link }}" readonly onclick="this.select()" aria-label="Shareable manager link">
         <div class="row share-actions" style="margin-top:12px;">
           <button class="btn primary" type="button" onclick="sharePoll()">Share Round {{ round_num }} Poll</button>
-          <button class="btn secondary" type="button" onclick="copyPollLink()">Copy Poll Link</button>
-          <a class="btn secondary" href="#" onclick="return openTextMessage(event)">Message Text</a>
+          <button class="btn secondary" type="button" onclick="copyPollLink()">Copy Link</button>
+          <a class="btn secondary" href="#" onclick="return openTextMessage(event)">Open Text Message</a>
         </div>
         <p id="shareStatus" class="small" style="margin-top:10px; min-height:20px;" aria-live="polite"></p>
       </div>
@@ -58,7 +59,7 @@
       <h2>Round {{ round_num }} Progress</h2>
       <p class="small muted">{{ other_responded }} of {{ other_total }} other managers responded · {{ responded }} of {{ managers|length }} total</p>
     </div>
-    <a class="btn secondary" href="{{ url_for('league_dashboard', league_id=league.id) }}">View Full Progress</a>
+    <a class="btn secondary" href="{{ url_for('league_dashboard', league_id=league.id) }}">View League Dashboard</a>
   </div>
   <div class="progress"><span style="width:{{ (responded*100/(managers|length or 1))|round }}%"></span></div>
 </div>
@@ -105,7 +106,7 @@ ${pollLink}
 Please respond by ${deadlineDisplay}${timezoneDisplay}.`;
 
   const round2Message =
-`🏈 EZCommish Draft Poll — Round 2
+`🏈 EZCommish Draft Poll — Round 2 — Start Time
 ${leagueName}
 
 We found our draft date! Now we need to choose the exact start time.

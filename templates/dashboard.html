@@ -1,40 +1,41 @@
 {% extends 'base.html' %}
 {% block body %}
+<div class="page-nav"><a class="back-link" href="{{ url_for('home') }}">← Back to My Leagues</a></div>
 <div class="row between">
   <div>
     <h1>{{league.name}}</h1>
     <div class="muted">Fantasy {{league.sport}} · {{league.team_count}} teams</div>
   </div>
   {% if league.status not in ['canceled','confirmed'] %}
-    <a class="btn secondary" href="{{url_for('share_poll',league_id=league.id)}}">Share Poll</a>
+    <a class="btn secondary" href="{{url_for('share_poll',league_id=league.id)}}">Share with League</a>
   {% endif %}
 </div>
 
 <div class="card poll-management-card">
-  <h2>Draft Poll Management</h2>
-  <p class="muted">Manage the current draft scheduling poll for your league.</p>
+  <h2>League Draft Settings</h2>
+  <p class="muted">Manage voting, restart draft scheduling, or remove this league.</p>
 
   <div class="row" style="gap:10px; flex-wrap:wrap;">
     {% if league.status not in ['canceled','closed','confirmed'] %}
-      <form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Close this draft poll? Managers will no longer be able to vote, but the current results will be kept.');">
+      <form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Close voting? Managers will no longer be able to submit responses, but all current results will be kept.');">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button class="btn secondary" type="submit">Close Poll</button>
+        <button class="btn secondary" type="submit">Close Voting</button>
       </form>
     {% endif %}
 
-    <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Reset this draft poll and start over? All poll votes, dates, times and deadline will be erased. Managers and team names will be kept.');">
+    <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Restart draft scheduling? Current dates, times, deadline, and submitted votes will be cleared. Managers and team names will remain.');">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <button class="btn warning-btn" type="submit">Reset Draft Poll</button>
+      <button class="btn warning-btn" type="submit">Restart Draft Scheduling</button>
     </form>
 
     {% if league.status not in ['canceled','closed','confirmed'] %}
-      <form method="post" action="{{url_for('cancel_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Cancel / void this draft poll? Managers will no longer be able to vote.');">
+      <form method="post" action="{{url_for('cancel_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Cancel this draft poll? Managers will no longer be able to vote. The league itself will remain.');">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button class="btn danger-outline" type="submit">Cancel / Void Poll</button>
+        <button class="btn danger-outline" type="submit">Cancel Draft Poll</button>
       </form>
     {% endif %}
 
-    <form method="post" action="{{url_for('delete_league',league_id=league.id)}}" onsubmit="return confirm('Permanently delete this league and ALL managers, polls and votes? This cannot be undone.');">
+    <form method="post" action="{{url_for('delete_league',league_id=league.id)}}" onsubmit="return confirm('Delete this league permanently? Managers, polls, votes, and scheduling history will be deleted. This cannot be undone.');">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger" type="submit">Delete League</button>
     </form>
@@ -52,7 +53,7 @@
   </div>
 {% else %}
   <div class="card">
-    <h2>Responses</h2>
+    <h2>Manager Responses</h2>
     {% if active %}
       {% if commissioner_manager %}
         <div class="league commish-vote-card">
@@ -61,7 +62,7 @@
             <div class="small muted">You count as one of the {{league.team_count}} managers.</div>
           </div>
           {% if commissioner_done %}
-            <span class="pill green">My Vote Submitted ✓</span>
+            <span class="pill green">Your Vote: Submitted ✓</span>
           {% else %}
             <a class="btn primary" href="{{url_for('commissioner_vote',league_id=league.id)}}">Cast My Vote</a>
           {% endif %}

@@ -2,10 +2,10 @@
 {% block body %}
 <div class="row between">
   <div><div class="muted">Welcome back,</div><h1>{{c.name}}!</h1></div>
-  <a class="btn primary" href="{{url_for('new_league')}}">+ Create Draft Poll</a>
+  <a class="btn primary" href="{{url_for('new_league')}}">+ Create League</a>
 </div>
 <div class="card">
-  <h2>Your Leagues</h2>
+  <h2>My Leagues</h2>
   <p class="small muted">Old test leagues can be permanently removed here.</p>
   {% if not leagues %}<p class="muted">No leagues yet. Create your first draft poll.</p>{% endif %}
   {% for l in leagues %}

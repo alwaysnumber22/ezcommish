@@ -1,2 +1,3 @@
-{% extends 'base.html' %}{% block body %}<div class="card"><h1>Create League</h1><form method="post">
+{% extends 'base.html' %}{% block body %}
+<div class="page-nav"><a class="back-link" href="{{ url_for('home') }}">← Back to My Leagues</a></div><div class="card"><h1>Create League</h1><form method="post">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><div class="label">League Name</div><input class="input" name="name" required><div class="label">Sport</div><select name="sport">{% for s in sports %}<option>{{s}}</option>{% endfor %}</select><div class="label">Number of Teams</div><input class="input" type="number" min="4" max="32" name="team_count" value="12" required><div class="label">Time Zone</div><input class="input" name="timezone" value="Pacific Time (PT)" required><button class="btn primary">Next: Add Managers</button></form></div>{% endblock %}

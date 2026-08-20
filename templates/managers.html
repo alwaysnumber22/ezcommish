@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% block body %}
+<div class="page-nav"><a class="back-link" href="{{ url_for('home') }}">← Back to My Leagues</a></div>
 <div class="card">
-  <h1>Add Managers</h1>
+  <h1>League Managers</h1>
   <p class="muted">Add yourself and each manager in {{league.name}}.</p>
 
   {% for m in managers %}
@@ -27,7 +28,7 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn secondary" type="submit">+ Add Manager</button>
+      <button class="btn secondary" type="submit">+ Add Another Manager</button>
       <button class="btn secondary" type="button" id="contactPickerBtn" style="display:none">Add from Contacts</button>
     </div>
 

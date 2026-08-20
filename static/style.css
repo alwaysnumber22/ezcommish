@@ -25,3 +25,14 @@
 
 .logout-link{font-size:.9rem;color:#b9c5d1;text-decoration:none;margin-left:auto}
 .logout-link:hover{color:#fff}
+
+/* Commissioner UX consistency */
+.page-nav{margin:0 0 14px}
+.back-link{color:#aebbc8;text-decoration:none;font-size:.92rem;font-weight:600}
+.back-link:hover{color:#fff}
+.poll-management-card{border:1px solid rgba(255,255,255,.08)}
+.btn.warning-btn{background:#5a4a18;color:#ffe7a0}
+.btn.danger-outline{background:transparent;border:1px solid #a94a4a;color:#ffb4b4}
+.btn.danger{background:#8b2f2f;color:#fff}
+.status-success{font-weight:700;color:#2ccb51}
+.ready-step h2,.card h2{margin-bottom:6px}

@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% block body %}
+<div class="page-nav"><a class="back-link" href="{{ url_for('home') }}">← Back to My Leagues</a></div>
 <div class="card">
   <div class="preferred"><b>🏆 DRAFT DAY IS SET!</b></div>
-  <h1>Send Final Notice</h1>
+  <h1>Share Draft Day</h1>
   <p class="muted">Your draft is confirmed. Send the final result to your league now.</p>
 
   <div class="card" style="margin-top:16px; border:1px solid rgba(44,203,81,.35);">
@@ -18,14 +19,14 @@
   <textarea id="finalMessage" class="input" rows="8" readonly></textarea>
 
   <div class="row" style="margin-top:12px;">
-    <button class="btn primary" type="button" onclick="shareFinalNotice()">Share Final Notice</button>
+    <button class="btn primary" type="button" onclick="shareFinalNotice()">Share Draft Day</button>
     <button class="btn secondary" type="button" onclick="copyFinalMessage()">Copy Message</button>
     <a class="btn secondary" href="#" onclick="return openTextMessage(event)">Message Text</a>
-    <a class="btn secondary" href="{{ url_for('draft_day', token=league.share_token) }}">View Draft Day</a>
+    <a class="btn secondary" href="{{ url_for('draft_day', token=league.share_token) }}">View Draft Day Details</a>
   </div>
 
   <p id="shareStatus" class="small" style="margin-top:10px; min-height:20px;" aria-live="polite"></p>
-  <p class="small muted">EZCommish does not send paid server SMS in V1. On your phone, <strong>Share Final Notice</strong> opens the native share sheet so you can choose your existing league group text. The permanent Draft Day link is included.</p>
+  <p class="small muted">EZCommish does not send paid server SMS in V1. On your phone, <strong>Share Draft Day</strong> opens the native share sheet so you can choose your existing league group text. The permanent Draft Day link is included.</p>
 </div>
 
 <script>
