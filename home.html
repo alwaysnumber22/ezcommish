@@ -6,30 +6,22 @@
 </div>
 <div class="card">
   <h2>Your Leagues</h2>
+  <p class="small muted">Old test leagues can be permanently removed here.</p>
   {% if not leagues %}<p class="muted">No leagues yet. Create your first draft poll.</p>{% endif %}
   {% for l in leagues %}
-    <div class="league">
+    <div class="league league-manage-row">
       <div>
         <b>{{l.name}}</b>
         <div class="small muted">Fantasy {{l.sport}} · {{l.team_count}} teams</div>
       </div>
-      <div class="row">
+      <div class="row league-actions">
         <span class="pill {% if l.status=='confirmed' %}green{% endif %}">{{l.status|replace('_',' ')|title}}</span>
         <a class="btn secondary" href="{{url_for('league_dashboard',league_id=l.id)}}">Open</a>
-        <button class="btn danger" type="button" onclick="document.getElementById('deleteLeague{{l.id}}').showModal()">Delete</button>
+        <form method="post" action="{{url_for('delete_league',league_id=l.id)}}" onsubmit="return confirm('Permanently delete {{l.name|e}} and all of its draft poll data? This cannot be undone.');">
+          <button class="btn danger" type="submit">Delete League</button>
+        </form>
       </div>
     </div>
-    <dialog id="deleteLeague{{l.id}}" class="modal-card">
-      <form method="post" action="{{url_for('delete_league',league_id=l.id)}}">
-        <h2>Delete {{l.name}}?</h2>
-        <p>This permanently removes this league, its managers, draft polls, and all test voting data.</p>
-        <p><b>This cannot be undone.</b></p>
-        <div class="row">
-          <button class="btn secondary" type="button" onclick="document.getElementById('deleteLeague{{l.id}}').close()">Keep League</button>
-          <button class="btn danger" type="submit">DELETE LEAGUE</button>
-        </div>
-      </form>
-    </dialog>
   {% endfor %}
 </div>
 <a class="small muted" href="{{url_for('logout')}}">Sign out</a>

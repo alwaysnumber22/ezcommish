@@ -2,3 +2,11 @@
 .poll-settings{position:relative}.poll-settings>summary{list-style:none}.poll-settings>summary::-webkit-details-marker{display:none}.settings-menu{position:absolute;right:0;top:48px;z-index:20;width:245px;background:#0d2335;border:1px solid var(--line);border-radius:13px;padding:12px;box-shadow:0 16px 40px #0008}.settings-action{width:100%;display:block;text-align:left;border:0;border-radius:9px;padding:11px;margin-top:7px;background:#132c40;color:white;font-weight:800;cursor:pointer}.settings-action.warning{color:#ffd56a}.settings-action.danger-text{color:#ff8b8b}.modal-card{max-width:520px;width:calc(100% - 28px);background:#0d2335;color:white;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 20px 60px #000b}.modal-card::backdrop{background:#020812cc}
 
 .commish-vote-card{border:1px solid rgba(49,209,88,.35);background:rgba(49,209,88,.06);margin-bottom:14px}
+
+/* Always-visible commissioner cleanup controls */
+.management-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.management-actions form,.league-actions form{margin:0}
+.warning-btn{background:#f5b942;color:#101820;border:1px solid #f5b942}
+.danger-outline{background:transparent;color:#ff7b7b;border:1px solid #ff7b7b}
+.poll-management-card{border:1px solid rgba(255,255,255,.12)}
+@media(max-width:700px){.league-manage-row{align-items:flex-start}.league-actions{width:100%;flex-wrap:wrap}.management-actions{flex-direction:column;align-items:stretch}.management-actions form,.management-actions .btn{width:100%}}
