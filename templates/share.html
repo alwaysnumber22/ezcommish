@@ -90,6 +90,8 @@
 
   const deadlineDisplay = formatDeadline(deadlineRaw);
   const timezoneDisplay = leagueTimezone ? ` (${leagueTimezone})` : '';
+  const round2DateDisplay = {{ round2_date_display|default('Selected Draft Date', true)|tojson }};
+  const round2WindowDisplay = {{ round2_window_display|default('Selected Time Window', true)|tojson }};
 
   const round1Message =
 `🏈 EZCommish Draft Poll — Round 1
@@ -106,10 +108,15 @@ Please respond by ${deadlineDisplay}${timezoneDisplay}.`;
 `🏈 EZCommish Draft Poll — Round 2
 ${leagueName}
 
-The draft date and time of day are set. Now select your exact draft start-time availability.
+We found our draft date! Now we need to choose the exact start time.
 
-Submit your availability here:
-${pollLink}`;
+📅 Draft Date: ${round2DateDisplay}
+🕒 Time Window: ${round2WindowDisplay}
+
+Select all start times that work for you:
+${pollLink}
+
+Please respond by ${deadlineDisplay}${timezoneDisplay}.`;
 
   const pollMessage = roundNum === 1 ? round1Message : round2Message;
 
