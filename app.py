@@ -87,7 +87,11 @@ class Database:
 
     def executemany(self, sql, seq):
         if self.is_postgres:
-            return self.conn.executemany(self._sql(sql), seq)
+            # psycopg3 exposes executemany() on cursors, not Connection.
+            # Round 1/2 ballot submission uses this path to persist all votes.
+            cur = self.conn.cursor()
+            cur.executemany(self._sql(sql), seq)
+            return CursorProxy(cur)
         return self.conn.executemany(sql, seq)
 
     def commit(self):
@@ -545,7 +549,12 @@ def vote(token):
             if v not in VOTE_VALUES:
                 flash('Please answer every option.'); return redirect(request.url)
             votes.append((rnd['id'],mid,o['id'],v,datetime.utcnow().isoformat()))
-        db().executemany('INSERT INTO responses(round_id,manager_id,option_id,vote,submitted_at) VALUES(?,?,?,?,?)',votes); db().commit()
+        # Replace this manager's current round responses atomically. This protects
+        # against accidental double-submits while preserving the locked-ballot UX.
+        db().execute('DELETE FROM responses WHERE round_id=? AND manager_id=?', (rnd['id'], mid))
+        db().executemany('INSERT INTO responses(round_id,manager_id,option_id,vote,submitted_at) VALUES(?,?,?,?,?)', votes)
+        db().commit()
+        app.logger.info('Ballot submitted league_id=%s round_id=%s manager_id=%s votes=%s', league['id'], rnd['id'], mid, len(votes))
         return redirect(url_for('submitted',token=token))
     return render_template('vote.html',league=league,rnd=rnd,opts=opts,windows=TIME_WINDOWS)
 

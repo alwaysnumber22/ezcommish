@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="card">
+  <h1>Poll Ready</h1>
+  <p>{{ league.name }} · Fantasy {{ league.sport }}</p>
+
+  <div class="label">Shareable Manager Link</div>
+  <input id="pollLink" class="input" value="{{ link }}" readonly onclick="this.select()" aria-label="Shareable manager link">
+
+  <div class="card" style="margin-top:14px; border:1px solid rgba(44,203,81,.35);">
+    <h2 style="margin-top:0;">Commissioner Availability</h2>
+    <p class="small muted">You count as one of the {{ league.team_count }} managers. You do not need to text the poll to yourself.</p>
+    <a class="btn primary" href="{{ url_for('commissioner_vote', league_id=league.id) }}">Cast My Vote</a>
+  </div>
+
+  <div class="row" style="margin-top:12px;">
+    <button class="btn primary" type="button" onclick="sharePoll()">Share Poll</button>
+    <button class="btn secondary" type="button" onclick="copyPollLink()">Copy Link</button>
+    <a id="textPollBtn" class="btn secondary" href="#" onclick="return openTextMessage(event)">Message Text</a>
+    <a class="btn secondary" href="{{ url_for('league_dashboard', league_id=league.id) }}">View Progress</a>
+  </div>
+
+  <p id="shareStatus" class="small" style="margin-top:10px; min-height:20px;" aria-live="polite"></p>
+  <p class="small muted">The same common link is used by every manager. They select their name when they open it.</p>
+  <p class="small muted">On a phone, <strong>Share Poll</strong> opens the phone's share sheet so you can choose Messages. <strong>Copy Link</strong> also works as a fallback.</p>
+</div>
+
+<script>
+  const pollLink = {{ link|tojson }};
+  const leagueName = {{ league.name|tojson }};
+  const pollMessage = `Draft scheduling for ${leagueName} is open. Select your availability here: ${pollLink}`;
+
+  function setStatus(message, ok = true) {
+    const el = document.getElementById('shareStatus');
+    el.textContent = message;
+    el.style.color = ok ? '#2CCB51' : '#ffb4b4';
+  }
+
+  async function copyPollLink() {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(pollLink);
+      } else {
+        const input = document.getElementById('pollLink');
+        input.focus();
+        input.select();
+        input.setSelectionRange(0, 99999);
+        const copied = document.execCommand('copy');
+        if (!copied) throw new Error('copy command failed');
+      }
+      setStatus('Link copied. Paste it into your league group text.');
+    } catch (err) {
+      const input = document.getElementById('pollLink');
+      input.focus();
+      input.select();
+      input.setSelectionRange(0, 99999);
+      setStatus('Automatic copy was blocked. The link is selected — choose Copy from your browser menu.', false);
+    }
+  }
+
+  async function sharePoll() {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${leagueName} Draft Poll`,
+          text: `Draft scheduling for ${leagueName} is open. Select your availability:`,
+          url: pollLink
+        });
+        setStatus('Share sheet opened.');
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+    // Desktop/unsupported fallback: copy the link.
+    await copyPollLink();
+  }
+
+  function openTextMessage(event) {
+    event.preventDefault();
+    const encoded = encodeURIComponent(pollMessage);
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    // iOS and Android parse the SMS body separator differently on some versions.
+    const smsUrl = isIOS ? `sms:&body=${encoded}` : `sms:?body=${encoded}`;
+    window.location.href = smsUrl;
+    setStatus('Opening your text-message app…');
+    return false;
+  }
+</script>
+{% endblock %}
