@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class="row between">
-  <div><div class="muted">Welcome back,</div><h1>{{ commissioner.name }}!</h1>
-<p class="home-kicker">Your leagues, all in one place.</p>
-<p class="muted">Create a league, schedule your draft, and keep your managers on the same page.</p></div>
+  <div><div class="muted">Welcome back,</div><h1>{{c.name}}!</h1></div>
   <a class="btn primary" href="{{url_for('new_league')}}">+ Create League</a>
 </div>
 <div class="card">
@@ -27,5 +25,5 @@
     </div>
   {% endfor %}
 </div>
-
+<a class="small muted" href="{{url_for('logout')}}">Sign out</a>
 {% endblock %}
