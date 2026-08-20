@@ -1,9 +1,0 @@
-{% extends 'base.html' %}{% block body %}
-<div class="card">
-  <h1>Something went wrong</h1>
-  <p class="muted">EZCommish hit an unexpected error while loading this page.</p>
-  <p><b>Error reference:</b> {{ error_id }}</p>
-  <p class="small muted">Please send this reference to the commissioner/developer. The full error is recorded in the server log.</p>
-  <button class="btn primary" onclick="location.reload()">Try Again</button>
-</div>
-{% endblock %}
