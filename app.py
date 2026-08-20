@@ -1,4 +1,4 @@
-import os, sqlite3, secrets, logging, sys, traceback, uuid
+import os, sqlite3, secrets, logging, sys, traceback, uuid, re
 from datetime import datetime, timedelta
 from flask import Flask, g, render_template, request, redirect, url_for, session, flash, abort, send_file
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -45,6 +45,26 @@ TIME_WINDOWS = {
 }
 SPORTS = ['Football', 'Baseball', 'Basketball', 'Hockey', 'Other']
 VOTE_VALUES = ['preferred', 'available', 'cant']
+
+def format_us_date(value):
+    """Display stored YYYY-MM-DD dates as MM-DD-YYYY without changing storage."""
+    if value is None:
+        return ''
+    s = str(value)
+    try:
+        # Exact stored date.
+        if re.fullmatch(r'\d{4}-\d{2}-\d{2}', s):
+            return datetime.strptime(s, '%Y-%m-%d').strftime('%m-%d-%Y')
+        # Date/time-local value: preserve the time portion, convert only the date.
+        if re.fullmatch(r'\d{4}-\d{2}-\d{2}T.*', s):
+            date_part, time_part = s.split('T', 1)
+            return datetime.strptime(date_part, '%Y-%m-%d').strftime('%m-%d-%Y') + ' ' + time_part
+    except (ValueError, TypeError):
+        pass
+    return s
+
+app.jinja_env.filters['usdate'] = format_us_date
+
 
 
 class CursorProxy:
@@ -400,9 +420,20 @@ def share_poll(league_id):
                 other_total += 1
                 other_responded += 1 if done else 0
 
-    return render_template('share.html', league=league, managers=managers, link=link,
-                           rnd=rnd, round_num=round_num, commissioner_done=commissioner_done,
-                           responded=responded, other_responded=other_responded, other_total=other_total)
+    return render_template(
+        'share.html',
+        league=league,
+        managers=managers,
+        link=link,
+        rnd=rnd,
+        round_num=round_num,
+        commissioner_done=commissioner_done,
+        responded=responded,
+        other_responded=other_responded,
+        other_total=other_total,
+        round2_date_display=format_us_date(league['final_date']) if league['final_date'] else '',
+        round2_window_display=league['final_window'] or ''
+    )
 
 @app.route('/league/<int:league_id>/dashboard')
 def league_dashboard(league_id):
