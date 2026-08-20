@@ -22,3 +22,6 @@
 .step-content{min-width:0;flex:1}.step-content h2{margin:0 0 6px}.status-success{font-weight:800;color:#2ccb51;margin-top:10px}
 .share-actions{flex-wrap:wrap}
 @media(max-width:760px){.ready-steps{grid-template-columns:1fr}.round-ready-header{flex-direction:column}.share-actions .btn{width:100%;text-align:center}}
+
+.logout-link{font-size:.9rem;color:#b9c5d1;text-decoration:none;margin-left:auto}
+.logout-link:hover{color:#fff}

@@ -1,1 +1,2 @@
-{% extends 'base.html' %}{% block body %}<div class="card" style="max-width:520px;margin:auto"><h1>Welcome, {{m.name}}!</h1><p class="muted">Enter your fantasy team name.</p><form method="post"><input class="input" name="team_name" required autofocus><button class="btn primary" style="width:100%">Continue</button></form></div>{% endblock %}
+{% extends 'base.html' %}{% block body %}<div class="card" style="max-width:520px;margin:auto"><h1>Welcome, {{m.name}}!</h1><p class="muted">Enter your fantasy team name.</p><form method="post">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input class="input" name="team_name" required autofocus><button class="btn primary" style="width:100%">Continue</button></form></div>{% endblock %}

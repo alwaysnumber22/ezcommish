@@ -17,21 +17,25 @@
   <div class="row" style="gap:10px; flex-wrap:wrap;">
     {% if league.status not in ['canceled','closed','confirmed'] %}
       <form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Close this draft poll? Managers will no longer be able to vote, but the current results will be kept.');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn secondary" type="submit">Close Poll</button>
       </form>
     {% endif %}
 
     <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Reset this draft poll and start over? All poll votes, dates, times and deadline will be erased. Managers and team names will be kept.');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn warning-btn" type="submit">Reset Draft Poll</button>
     </form>
 
     {% if league.status not in ['canceled','closed','confirmed'] %}
       <form method="post" action="{{url_for('cancel_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Cancel / void this draft poll? Managers will no longer be able to vote.');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn danger-outline" type="submit">Cancel / Void Poll</button>
       </form>
     {% endif %}
 
     <form method="post" action="{{url_for('delete_league',league_id=league.id)}}" onsubmit="return confirm('Permanently delete this league and ALL managers, polls and votes? This cannot be undone.');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger" type="submit">Delete League</button>
     </form>
   </div>
@@ -42,6 +46,7 @@
     <h2>Draft Poll {{'Closed' if league.status=='closed' else 'Canceled'}}</h2>
     <p class="muted">Managers can no longer vote in this poll. Your league roster, phone numbers, and team names are still saved.</p>
     <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Start a fresh draft poll? Current poll data will be cleared, while managers and team names are kept.');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn primary" type="submit">Start Fresh Draft Poll</button>
     </form>
   </div>
@@ -76,6 +81,7 @@
             <span class="pill {% if done %}green{% endif %}">{{'Responded' if done else 'Waiting'}}</span>
             {% if done %}
               <form method="post" action="{{url_for('reset_ballot',league_id=league.id,manager_id=m.id,round_num=active.round_num)}}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button class="btn danger" type="submit">Reset</button>
               </form>
             {% endif %}

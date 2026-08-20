@@ -12,6 +12,7 @@
     </div>
     {% if not m.is_commissioner %}
     <form method="post" action="{{url_for('delete_manager',league_id=league.id,manager_id=m.id)}}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger">Remove</button>
     </form>
     {% endif %}
@@ -19,6 +20,7 @@
   {% endfor %}
 
   <form method="post" id="managerForm">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="grid">
       <input class="input" id="managerName" name="name" placeholder="Manager name" autocomplete="name">
       <input class="input" id="managerPhone" name="phone" placeholder="Mobile number" autocomplete="tel" inputmode="tel">

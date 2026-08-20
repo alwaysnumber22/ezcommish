@@ -6,17 +6,28 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 
-# Security-hardened session configuration
-app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+# Production diagnostics: send errors to Render stdout/stderr so they appear in Logs.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    stream=sys.stdout,
+    force=True,
+)
+app.logger.setLevel(logging.INFO)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+app.config['DATABASE_URL'] = os.environ.get('DATABASE_URL', '')
+app.config['DATABASE'] = os.environ.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__), 'ezcommish.db'))
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-    SESSION_COOKIE_SECURE=os.environ.get('RENDER', '').lower() == 'true' or os.environ.get('FLASK_ENV') == 'production',
-    PERMANENT_SESSION_LIFETIME=60 * 60 * 12,  # 12 hours
+    SESSION_COOKIE_SECURE=bool(os.environ.get('RENDER')),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
 )
 
+
 def current_commissioner_id():
-    return session.get('user_id') or session.get('commissioner_id')
+    return session.get('commissioner_id')
 
 def login_required(view):
     @wraps(view)
@@ -27,49 +38,35 @@ def login_required(view):
         return view(*args, **kwargs)
     return wrapped
 
-def get_csrf_token():
+def csrf_token():
     token = session.get('_csrf_token')
     if not token:
         token = secrets.token_urlsafe(32)
         session['_csrf_token'] = token
     return token
 
-app.jinja_env.globals['csrf_token'] = get_csrf_token
-
-def validate_csrf():
-    sent = request.form.get('_csrf_token', '')
-    expected = session.get('_csrf_token', '')
-    if not sent or not expected or not secrets.compare_digest(sent, expected):
-        abort(400, description='Invalid or expired form token. Please refresh the page and try again.')
+app.jinja_env.globals['csrf_token'] = csrf_token
 
 @app.before_request
-def make_session_permanent():
+def security_before_request():
+    # Commissioner sessions expire after 12 hours of inactivity.
     session.permanent = True
+    # Require a session-bound token for all browser POST forms.
+    if request.method == 'POST':
+        sent = request.form.get('_csrf_token', '')
+        expected = session.get('_csrf_token', '')
+        if not sent or not expected or not secrets.compare_digest(sent, expected):
+            abort(400, description='This form expired or could not be verified. Refresh the page and try again.')
 
 @app.after_request
 def security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', 'geolocation=(), camera=(), microphone=()')
     if request.is_secure:
         response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
     return response
-
-
-# Production diagnostics: send errors to Render stdout/stderr so they appear in Logs.
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(name)s %(message)s',
-    stream=sys.stdout,
-    force=True,
-)
-app.logger.setLevel(logging.INFO)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-me')
-app.config['DATABASE_URL'] = os.environ.get('DATABASE_URL', '')
-app.config['DATABASE'] = os.environ.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__), 'ezcommish.db'))
-if os.environ.get('RENDER'):
-    app.config.update(SESSION_COOKIE_SECURE=True, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
 
 @app.get('/health')
 def health():
@@ -395,6 +392,7 @@ def home():
     return render_template('home.html', c=c, leagues=leagues)
 
 @app.route('/league/new', methods=['GET','POST'])
+@login_required
 def new_league():
     c=current_commissioner()
     if not c: return redirect(url_for('index'))
@@ -409,6 +407,7 @@ def new_league():
     return render_template('new_league.html', sports=SPORTS)
 
 @app.route('/league/<int:league_id>/managers', methods=['GET','POST'])
+@login_required
 def edit_managers(league_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -421,6 +420,7 @@ def edit_managers(league_id):
     return render_template('managers.html', league=league, managers=managers)
 
 @app.post('/league/<int:league_id>/manager/<int:manager_id>/delete')
+@login_required
 def delete_manager(league_id, manager_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -428,6 +428,7 @@ def delete_manager(league_id, manager_id):
     return redirect(url_for('edit_managers',league_id=league_id))
 
 @app.route('/league/<int:league_id>/dates', methods=['GET','POST'])
+@login_required
 def choose_dates(league_id):
     league=owned_league(league_id)
     if not league: abort(404)
@@ -563,6 +564,7 @@ def select_round1(league_id,option_id):
     return redirect(url_for('share_poll',league_id=league_id))
 
 @app.post('/league/<int:league_id>/new-dates')
+@login_required
 def new_dates(league_id):
     if not owned_league(league_id): abort(404)
     return redirect(url_for('choose_dates',league_id=league_id))
@@ -570,7 +572,6 @@ def new_dates(league_id):
 @app.post('/league/<int:league_id>/reset/<int:manager_id>/<int:round_num>')
 @login_required
 def reset_ballot(league_id,manager_id,round_num):
-    validate_csrf()
     if not owned_league(league_id): abort(404)
     rnd=get_active_round(league_id,round_num)
     if rnd:
@@ -581,7 +582,6 @@ def reset_ballot(league_id,manager_id,round_num):
 @app.post('/league/<int:league_id>/poll/close')
 @login_required
 def close_draft_poll(league_id):
-    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     db().execute("UPDATE poll_rounds SET status='closed' WHERE league_id=? AND status='open'",(league_id,))
@@ -593,7 +593,6 @@ def close_draft_poll(league_id):
 @app.post('/league/<int:league_id>/delete')
 @login_required
 def delete_league(league_id):
-    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     league_name=league['name']
@@ -606,7 +605,6 @@ def delete_league(league_id):
 @app.post('/league/<int:league_id>/poll/reset')
 @login_required
 def reset_draft_poll(league_id):
-    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     # Delete every poll round for this league. Cascading FKs remove options/responses.
@@ -622,7 +620,6 @@ def reset_draft_poll(league_id):
 @app.post('/league/<int:league_id>/poll/cancel')
 @login_required
 def cancel_draft_poll(league_id):
-    validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     db().execute("UPDATE poll_rounds SET status='canceled' WHERE league_id=? AND status='open'",(league_id,))
@@ -646,8 +643,6 @@ def select_round2(league_id,option_id):
 @app.route('/league/<int:league_id>/confirm', methods=['GET','POST'])
 @login_required
 def confirm_draft(league_id):
-    if request.method == 'POST':
-        validate_csrf()
     league=owned_league(league_id)
     if not league: abort(404)
     if request.method=='POST':
@@ -657,6 +652,7 @@ def confirm_draft(league_id):
     return render_template('confirm.html',league=league)
 
 @app.route('/league/<int:league_id>/final-notice')
+@login_required
 def final_notice(league_id):
     league=owned_league(league_id)
     if not league: abort(404)
