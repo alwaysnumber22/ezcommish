@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block body %}
+<div class="card hero">
+  <div class="bigcheck">×</div>
+  <h1>Draft Poll {{'Closed' if league.status=='closed' else 'Canceled'}}</h1>
+  <p class="muted">The commissioner has {{'closed' if league.status=='closed' else 'canceled'}} this draft poll. Voting is no longer available.</p>
+</div>
+{% endblock %}

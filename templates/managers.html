@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="card">
+  <h1>Add Managers</h1>
+  <p class="muted">Add yourself and each manager in {{league.name}}.</p>
+
+  {% for m in managers %}
+  <div class="league">
+    <div>
+      <b>{{m.name}}{% if m.is_commissioner %} (You){% endif %}</b>
+      <div class="small muted">{{m.phone}}</div>
+    </div>
+    {% if not m.is_commissioner %}
+    <form method="post" action="{{url_for('delete_manager',league_id=league.id,manager_id=m.id)}}">
+      <button class="btn danger">Remove</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <form method="post" id="managerForm">
+    <div class="grid">
+      <input class="input" id="managerName" name="name" placeholder="Manager name" autocomplete="name">
+      <input class="input" id="managerPhone" name="phone" placeholder="Mobile number" autocomplete="tel" inputmode="tel">
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn secondary" type="submit">+ Add Manager</button>
+      <button class="btn secondary" type="button" id="contactPickerBtn" style="display:none">Add from Contacts</button>
+    </div>
+
+    <p id="contactHelp" class="small muted" style="display:none;margin-top:8px">
+      Choose a contact from your phone. EZCommish only receives the contact you select.
+    </p>
+    <p id="contactError" class="small" style="display:none;margin-top:8px"></p>
+  </form>
+
+  <p class="small muted">Target team count: {{league.team_count}}. Current roster: {{managers|length}}.</p>
+  <a class="btn primary" href="{{url_for('choose_dates',league_id=league.id)}}">Next: Choose Dates</a>
+</div>
+
+<script>
+(function () {
+  const btn = document.getElementById('contactPickerBtn');
+  const help = document.getElementById('contactHelp');
+  const err = document.getElementById('contactError');
+  const nameInput = document.getElementById('managerName');
+  const phoneInput = document.getElementById('managerPhone');
+
+  // The Contact Picker API is currently supported by compatible mobile browsers
+  // such as Chrome on Android. Keep the normal fields as the universal fallback.
+  const contactPickerSupported = !!(navigator.contacts && navigator.contacts.select);
+
+  if (!contactPickerSupported) return;
+
+  btn.style.display = 'inline-flex';
+  help.style.display = 'block';
+
+  btn.addEventListener('click', async function () {
+    err.style.display = 'none';
+    err.textContent = '';
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Opening Contacts...';
+
+    try {
+      const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false });
+      if (!contacts || !contacts.length) return;
+
+      const contact = contacts[0];
+      if (contact.name && contact.name.length) {
+        nameInput.value = contact.name[0] || '';
+      }
+      if (contact.tel && contact.tel.length) {
+        phoneInput.value = contact.tel[0] || '';
+      }
+      phoneInput.focus();
+    } catch (e) {
+      // AbortError usually means the user closed the picker; don't show that as an error.
+      if (!e || e.name !== 'AbortError') {
+        err.textContent = 'Contacts could not be opened. You can still enter the manager manually.';
+        err.style.display = 'block';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+  });
+})();
+</script>
+{% endblock %}

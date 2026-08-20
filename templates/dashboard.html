@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="row between">
+  <div>
+    <h1>{{league.name}}</h1>
+    <div class="muted">Fantasy {{league.sport}} · {{league.team_count}} teams</div>
+  </div>
+  {% if league.status not in ['canceled','confirmed'] %}<a class="btn secondary" href="{{url_for('share_poll',league_id=league.id)}}">Share Poll</a>{% endif %}
+</div>
+
+<div class="card poll-management-card">
+  <h2>Draft Poll Management</h2>
+  <p class="small muted">Use these controls to clean up a test poll or completely remove a test league.</p>
+  <div class="row management-actions">
+    {% if league.status not in ['canceled','closed','confirmed','setup'] %}
+    <form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Close this draft poll? Managers will no longer be able to vote, but the current results will be kept.');">
+      <button class="btn secondary" type="submit">Close Poll</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Clear this draft poll and start over? All poll votes, dates, times and deadline will be erased. Managers and team names will be kept.');">
+      <button class="btn warning-btn" type="submit">Clear Draft Poll</button>
+    </form>
+    {% if league.status not in ['canceled','closed'] %}
+    <form method="post" action="{{url_for('cancel_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Cancel / void this draft poll? Managers will no longer be able to vote.');">
+      <button class="btn danger-outline" type="submit">Cancel / Void Poll</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{url_for('delete_league',league_id=league.id)}}" onsubmit="return confirm('Permanently delete this league and ALL managers, polls and votes? This cannot be undone.');">
+      <button class="btn danger" type="submit">Delete League</button>
+    </form>
+  </div>
+</div>
+
+{% if league.status in ['canceled','closed'] %}
+<div class="card">
+  <h2>Draft Poll {{'Closed' if league.status=='closed' else 'Canceled'}}</h2>
+  <p class="muted">Managers can no longer vote in this poll. Your league roster, phone numbers, and team names are still saved.</p>
+  <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Start a fresh draft poll? Current poll data will be cleared, while managers and team names are kept.');">
+    <button class="btn primary" type="submit">Start Fresh Draft Poll</button>
+  </form>
+</div>
+{% else %}
+<div class="card">
+  <h2>Responses</h2>
+  {% if active %}
+    {% if commissioner_manager %}
+      <div class="league commish-vote-card">
+        <div>
+          <b>Your Commissioner Vote</b>
+          <div class="small muted">You count as one of the {{league.team_count}} managers.</div>
+        </div>
+        {% if commissioner_done %}
+          <span class="pill green">My Vote Submitted ✓</span>
+        {% else %}
+          <a class="btn primary" href="{{url_for('commissioner_vote',league_id=league.id)}}">Cast My Vote</a>
+        {% endif %}
+      </div>
+    {% endif %}
+    <div class="progress"><span style="width:{{(responded*100/(statuses|length or 1))|round}}%"></span></div>
+    <p><b>{{responded}} of {{statuses|length}}</b> managers responded</p>
+    {% for m,done in statuses %}
+      <div class="league">
+        <div><b>{{m.name}}</b><div class="small muted">{{m.team_name or 'Team name not entered'}}</div></div>
+        <div class="row">
+          <span class="pill {% if done %}green{% endif %}">{{'Responded' if done else 'Waiting'}}</span>
+          {% if done %}<form method="post" action="{{url_for('reset_ballot',league_id=league.id,manager_id=m.id,round_num=active.round_num)}}"><button class="btn danger">Reset</button></form>{% endif %}
+        </div>
+      </div>
+    {% endfor %}
+    <a class="btn primary" href="{{url_for('results',league_id=league.id,round_num=active.round_num)}}">View Round {{active.round_num}} Results</a>
+  {% else %}
+    <p class="muted">No open voting round.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if league.status=='confirmed' %}<a class="btn primary" href="{{url_for('draft_day',token=league.share_token)}}">View Draft Day</a>{% endif %}
+
+
+{% endblock %}
