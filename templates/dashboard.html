@@ -10,15 +10,13 @@
 
 <div class="card poll-management-card">
   <h2>Draft Poll Management</h2>
-  <p class="small muted">Use these controls to clean up a test poll or completely remove a test league.</p>
-  <div class="row management-actions">
-    {% if league.status not in ['canceled','closed','confirmed','setup'] %}
-    <form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Close this draft poll? Managers will no longer be able to vote, but the current results will be kept.');">
+<p class="muted">Manage the current draft scheduling poll for your league.</p>
+<form method="post" action="{{url_for('close_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Close this draft poll? Managers will no longer be able to vote, but the current results will be kept.');">
       <button class="btn secondary" type="submit">Close Poll</button>
     </form>
     {% endif %}
     <form method="post" action="{{url_for('reset_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Clear this draft poll and start over? All poll votes, dates, times and deadline will be erased. Managers and team names will be kept.');">
-      <button class="btn warning-btn" type="submit">Clear Draft Poll</button>
+      <button class="btn warning-btn" type="submit">Reset Draft Poll</button>
     </form>
     {% if league.status not in ['canceled','closed'] %}
     <form method="post" action="{{url_for('cancel_draft_poll',league_id=league.id)}}" onsubmit="return confirm('Cancel / void this draft poll? Managers will no longer be able to vote.');">
