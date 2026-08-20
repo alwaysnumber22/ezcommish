@@ -37,10 +37,6 @@
 .status-success{font-weight:700;color:#2ccb51}
 .ready-step h2,.card h2{margin-bottom:6px}
 
-.delete-modal[hidden]{display:none}
-.delete-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.delete-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72)}
-.delete-modal-dialog{position:relative;width:min(100%,480px);background:#151b22;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.45)}
-.delete-modal-dialog h2{margin-top:0}
-.delete-modal-actions{justify-content:flex-end;margin-top:22px;gap:10px;flex-wrap:wrap}
-.modal-open{overflow:hidden}
+.home-kicker{font-size:1.05rem;font-weight:700;color:#fff;margin:4px 0 2px}
+.logout-link{font-size:.9rem;color:#b9c5d1;text-decoration:none;margin-left:12px}
+.logout-link:hover{color:#fff}

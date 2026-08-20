@@ -1,13 +1,15 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class="row between">
-  <div><div class="muted">Welcome back,</div><h1>{{c.name}}!</h1></div>
+  <div><div class="muted">Welcome back,</div><h1>{{ commissioner.name }}!</h1>
+<p class="home-kicker">Your leagues, all in one place.</p>
+<p class="muted">Create a league, schedule your draft, and keep your managers on the same page.</p></div>
   <a class="btn primary" href="{{url_for('new_league')}}">+ Create League</a>
 </div>
 <div class="card">
   <h2>My Leagues</h2>
-  <p class="small muted">Old test leagues can be permanently removed here.</p>
-  {% if not leagues %}<p class="muted">No leagues yet. Create your first draft poll.</p>{% endif %}
+  <p class="small muted">Manage your leagues and draft schedules.</p>
+  {% if not leagues %}<p class="muted">No leagues yet. Create your first league to start scheduling your draft.</p>{% endif %}
   {% for l in leagues %}
     <div class="league league-manage-row">
       <div>
@@ -17,52 +19,13 @@
       <div class="row league-actions">
         <span class="pill {% if l.status=='confirmed' %}green{% endif %}">{{l.status|replace('_',' ')|title}}</span>
         <a class="btn secondary" href="{{url_for('league_dashboard',league_id=l.id)}}">Open</a>
-        <form method="post" action="{{url_for('delete_league',league_id=l.id)}}">
+        <form method="post" action="{{url_for('delete_league',league_id=l.id)}}" onsubmit="return confirm('Permanently delete {{l.name|e}} and all of its draft poll data? This cannot be undone.');">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button class="btn danger" type="button" data-league-name="{{ league.name }}" onclick="openDeleteLeagueModal(this)">Delete League</button>
+          <button class="btn danger" type="submit">Delete League</button>
         </form>
       </div>
     </div>
   {% endfor %}
 </div>
-<a class="small muted" href="{{url_for('logout')}}">Sign out</a>
-
-<div id="deleteLeagueModal" class="delete-modal" hidden>
-  <div class="delete-modal-backdrop" onclick="closeDeleteLeagueModal()"></div>
-  <div class="delete-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteLeagueTitle">
-    <h2 id="deleteLeagueTitle">Delete League?</h2>
-    <p>This will permanently delete the league, including all managers, draft polls, votes, and scheduling history.</p>
-    <p><strong>This action cannot be undone.</strong></p>
-    <div class="row delete-modal-actions">
-      <button class="btn secondary" type="button" onclick="closeDeleteLeagueModal()">Keep League</button>
-      <button class="btn danger" type="button" onclick="confirmDeleteLeague()">Delete League</button>
-    </div>
-  </div>
-</div>
-<script>
-let pendingDeleteLeagueForm = null;
-
-function openDeleteLeagueModal(button) {
-  pendingDeleteLeagueForm = button.closest('form');
-  const modal = document.getElementById('deleteLeagueModal');
-  const leagueName =
-    button.dataset.leagueName ||
-    (pendingDeleteLeagueForm && pendingDeleteLeagueForm.dataset.leagueName) ||
-    {{ league.name|tojson if league is defined else '"this league"'|safe }};
-  document.getElementById('deleteLeagueTitle').textContent = `Delete ${leagueName}?`;
-  modal.hidden = false;
-  document.body.classList.add('modal-open');
-}
-
-function closeDeleteLeagueModal() {
-  document.getElementById('deleteLeagueModal').hidden = true;
-  document.body.classList.remove('modal-open');
-  pendingDeleteLeagueForm = null;
-}
-
-function confirmDeleteLeague() {
-  if (pendingDeleteLeagueForm) pendingDeleteLeagueForm.submit();
-}
-</script>
 
 {% endblock %}
