@@ -15,7 +15,12 @@
     <form method="post" action="{{url_for('delete_manager',league_id=league.id,manager_id=m.id)}}">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger">Remove</button>
-    </form>
+    
+<div class="manager-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+  <button class="btn secondary" type="button" id="contactPickerBtn" style="display:none">Add from Contacts</button>
+  <button class="btn secondary" type="submit">+ Add Another Manager</button>
+</div>
+</form>
     {% endif %}
   </div>
   {% endfor %}
@@ -28,8 +33,8 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn secondary" type="submit">+ Add Another Manager</button>
-      <button class="btn secondary" type="button" id="contactPickerBtn" style="display:none">Add from Contacts</button>
+      
+      
     </div>
 
     <p id="contactHelp" class="small muted" style="display:none;margin-top:8px">
