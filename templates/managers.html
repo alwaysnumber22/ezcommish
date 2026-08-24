@@ -15,12 +15,7 @@
     <form method="post" action="{{url_for('delete_manager',league_id=league.id,manager_id=m.id)}}">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger">Remove</button>
-    
-<div class="manager-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-  <button class="btn secondary" type="button" id="contactPickerBtn" style="display:none">Add from Contacts</button>
-  <button class="btn secondary" type="submit">+ Add Another Manager</button>
-</div>
-</form>
+    </form>
     {% endif %}
   </div>
   {% endfor %}
@@ -33,15 +28,32 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-      
-      
-    </div>
+</div>
 
     <p id="contactHelp" class="small muted" style="display:none;margin-top:8px">
       Choose a contact from your phone. EZCommish only receives the contact you select.
     </p>
     <p id="contactError" class="small" style="display:none;margin-top:8px"></p>
-  </form>
+  
+<div class="manager-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+  <button
+    type="button"
+    id="contactPickerBtn"
+    class="btn secondary"
+    style="display:none;"
+  >
+    Add from Contacts
+  </button>
+
+  <button
+    type="submit"
+    class="btn primary"
+  >
+    Add Another Manager
+  </button>
+</div>
+
+</form>
 
   <p class="small muted">Target team count: {{league.team_count}}. Current roster: {{managers|length}}.</p>
   <a class="btn primary" href="{{url_for('choose_dates',league_id=league.id)}}">Next: Choose Dates</a>
