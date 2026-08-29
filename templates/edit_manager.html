@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="page-nav">
+  <a class="back-link" href="{{ url_for('edit_managers', league_id=league.id) }}">← Back to League Roster</a>
+</div>
+
+<div class="card">
+  <h1>Edit Manager</h1>
+  <p class="muted">Update this manager's saved league information.</p>
+
+  <form method="post" style="max-width:560px">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <div class="label">Manager Name</div>
+    <input
+      class="input"
+      name="name"
+      value="{{ entered_name }}"
+      maxlength="60"
+      autocomplete="name"
+      required
+    >
+
+    <div class="label">Mobile Number</div>
+    <input
+      class="input"
+      name="phone"
+      value="{{ entered_phone }}"
+      maxlength="30"
+      autocomplete="tel"
+      inputmode="tel"
+      required
+    >
+
+    <div class="label">Team Name</div>
+    <input
+      class="input"
+      name="team_name"
+      value="{{ entered_team_name }}"
+      maxlength="80"
+      placeholder="Team name (optional)"
+    >
+    <p class="small muted" style="margin-top:6px">
+      Managers can also enter or update their team name when participating in the league poll.
+    </p>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">
+      <button class="btn primary" type="submit">Save Changes</button>
+      <a class="btn secondary" href="{{ url_for('edit_managers', league_id=league.id) }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

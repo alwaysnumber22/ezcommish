@@ -23,10 +23,13 @@
     </div>
 
     {% if not m.is_commissioner %}
-    <form method="post" action="{{ url_for('delete_manager', league_id=league.id, manager_id=m.id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <button class="btn danger" type="submit">Remove</button>
-    </form>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <a class="btn secondary" href="{{ url_for('edit_manager', league_id=league.id, manager_id=m.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('delete_manager', league_id=league.id, manager_id=m.id) }}" style="margin:0">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="btn danger" type="submit">Remove</button>
+      </form>
+    </div>
     {% endif %}
   </div>
   {% endfor %}
