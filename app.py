@@ -478,6 +478,67 @@ def edit_managers(league_id):
     managers=db().execute('SELECT * FROM managers WHERE league_id=? ORDER BY id',(league_id,)).fetchall()
     return render_template('managers.html', league=league, managers=managers)
 
+
+@app.route('/league/<int:league_id>/manager/<int:manager_id>/edit', methods=['GET','POST'])
+@login_required
+def edit_manager(league_id, manager_id):
+    league=owned_league(league_id)
+    if not league: abort(404)
+
+    manager=db().execute(
+        'SELECT * FROM managers WHERE id=? AND league_id=? AND active=1',
+        (manager_id, league_id)
+    ).fetchone()
+    if not manager: abort(404)
+
+    # Commissioner identity is account-level data. Keep this screen focused on
+    # maintaining the other saved managers in this league.
+    if manager['is_commissioner']:
+        flash('Commissioner account information is managed separately.')
+        return redirect(url_for('edit_managers', league_id=league_id))
+
+    if request.method=='POST':
+        name=safe_text(request.form.get('name'), 60)
+        phone=safe_text(request.form.get('phone'), 30)
+        team_name=safe_text(request.form.get('team_name'), 80)
+
+        if not name or not valid_phone(phone):
+            flash('Enter a manager name and a valid phone number.')
+            return render_template('edit_manager.html', league=league, manager=manager,
+                                   entered_name=name, entered_phone=phone, entered_team_name=team_name)
+
+        duplicate_name=db().execute(
+            'SELECT id FROM managers WHERE league_id=? AND id<>? AND LOWER(name)=LOWER(?) AND active=1',
+            (league_id, manager_id, name)
+        ).fetchone()
+        duplicate_phone=db().execute(
+            'SELECT id FROM managers WHERE league_id=? AND id<>? AND phone=? AND active=1',
+            (league_id, manager_id, phone)
+        ).fetchone()
+
+        if duplicate_name:
+            flash('That manager name is already in this league.')
+            return render_template('edit_manager.html', league=league, manager=manager,
+                                   entered_name=name, entered_phone=phone, entered_team_name=team_name)
+
+        if duplicate_phone:
+            flash('That phone number is already assigned to a manager in this league.')
+            return render_template('edit_manager.html', league=league, manager=manager,
+                                   entered_name=name, entered_phone=phone, entered_team_name=team_name)
+
+        db().execute(
+            'UPDATE managers SET name=?, phone=?, team_name=? WHERE id=? AND league_id=?',
+            (name, phone, team_name or None, manager_id, league_id)
+        )
+        db().commit()
+        flash(f'{name} was updated.')
+        return redirect(url_for('edit_managers', league_id=league_id))
+
+    return render_template('edit_manager.html', league=league, manager=manager,
+                           entered_name=manager['name'], entered_phone=manager['phone'],
+                           entered_team_name=manager['team_name'] or '')
+
+
 @app.post('/league/<int:league_id>/manager/<int:manager_id>/delete')
 @login_required
 def delete_manager(league_id, manager_id):
